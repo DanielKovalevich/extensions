@@ -7,7 +7,7 @@ class MangaPark extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '1.0.1'; }
+    get version() { return '1.0.3'; }
     get name() { return 'MangaPark'; }
     get icon() { return 'icon.png'; }
     get author() { return 'Daniel Kovalevich'; }
