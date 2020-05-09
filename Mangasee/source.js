@@ -26,7 +26,6 @@ class Mangasee extends Source_1.Source {
         }
         return requests;
     }
-    //FIXME: TAG IDs
     getMangaDetails(data, metadata) {
         var _a, _b;
         let manga = [];

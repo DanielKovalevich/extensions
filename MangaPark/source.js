@@ -7,7 +7,7 @@ class MangaPark extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '1.0.3'; }
+    get version() { return '1.0.2'; }
     get name() { return 'MangaPark'; }
     get icon() { return 'icon.png'; }
     get author() { return 'Daniel Kovalevich'; }
@@ -27,9 +27,8 @@ class MangaPark extends Source_1.Source {
         }
         return requests;
     }
-    //FIXME: TAG IDs
     getMangaDetails(data, metadata) {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g;
         let manga = [];
         for (let [i, response] of data.entries()) {
             let $ = this.cheerio.load(response);
@@ -79,11 +78,12 @@ class MangaPark extends Source_1.Source {
                     case 'Genre(s)': {
                         for (let genre of $('a', row).toArray()) {
                             let item = (_d = $(genre).html()) !== null && _d !== void 0 ? _d : "";
+                            let id = (_f = (_e = $(genre).attr('href')) === null || _e === void 0 ? void 0 : _e.split('/').pop()) !== null && _f !== void 0 ? _f : '';
                             let tag = item.replace(/<[a-zA-Z\/][^>]*>/g, "");
                             if (item.includes('Hentai')) {
                                 hentai = true;
                             }
-                            tagSections[0].tags.push(createTag({ id: tag, label: tag }));
+                            tagSections[0].tags.push(createTag({ id: id, label: tag }));
                         }
                         break;
                     }
@@ -98,11 +98,20 @@ class MangaPark extends Source_1.Source {
                     }
                     case 'Type': {
                         let type = $('td', row).text().split('-')[0].trim();
-                        tagSections[1].tags.push(createTag({ id: type.trim(), label: type.trim() }));
+                        let id = '';
+                        if (type.includes('Manga'))
+                            id = 'manga';
+                        else if (type.includes('Manhwa'))
+                            id = 'manhwa';
+                        else if (type.includes('Manhua'))
+                            id = 'manhua';
+                        else
+                            id = 'unknown';
+                        tagSections[1].tags.push(createTag({ id: id, label: type.trim() }));
                     }
                 }
             }
-            let summary = (_e = $('.summary').html()) !== null && _e !== void 0 ? _e : "";
+            let summary = (_g = $('.summary').html()) !== null && _g !== void 0 ? _g : "";
             manga.push({
                 id: metadata[i].id,
                 titles: titles,

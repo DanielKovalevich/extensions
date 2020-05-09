@@ -7,7 +7,7 @@ class Manganelo extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '1.0.1'; }
+    get version() { return '1.0.2'; }
     get name() { return 'Manganelo'; }
     get icon() { return 'icon.png'; }
     get author() { return 'Daniel Kovalevich'; }
@@ -26,9 +26,8 @@ class Manganelo extends Source_1.Source {
         }
         return requests;
     }
-    //FIXME: TAG IDs
     getMangaDetails(data, metadata) {
-        var _a, _b;
+        var _a, _b, _c, _d, _e;
         let manga = [];
         for (let [i, response] of data.entries()) {
             let $ = this.cheerio.load(response);
@@ -45,8 +44,7 @@ class Manganelo extends Source_1.Source {
             let views = 0;
             let lastUpdate = '';
             let hentai = false;
-            let tagSections = [createTagSection({ id: '0', label: 'genres', tags: [] }),
-                createTagSection({ id: '1', label: 'format', tags: [] })];
+            let tagSections = [createTagSection({ id: '0', label: 'genres', tags: [] })];
             for (let row of $('tr', table).toArray()) {
                 if ($(row).find('.info-alternative').length > 0) {
                     let alts = $('h2', table).text().split(/,|;/);
@@ -68,10 +66,11 @@ class Manganelo extends Source_1.Source {
                     let elems = $('.table-value', row).find('a').toArray();
                     for (let elem of elems) {
                         let text = $(elem).text();
+                        let id = (_e = (_d = (_c = $(elem).attr('href')) === null || _c === void 0 ? void 0 : _c.split('/').pop()) === null || _d === void 0 ? void 0 : _d.split('-').pop()) !== null && _e !== void 0 ? _e : '';
                         if (text.toLowerCase().includes('smut')) {
                             hentai = true;
                         }
-                        tagSections[0].tags.push(createTag({ id: text, label: text }));
+                        tagSections[0].tags.push(createTag({ id: id, label: text }));
                     }
                 }
             }
