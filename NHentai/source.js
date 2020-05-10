@@ -55,11 +55,12 @@ class NHentai extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '0.5'; }
+    get version() { return '0.6'; }
     get name() { return 'nHentai'; }
     get description() { return 'Extension that pulls manga from nHentai'; }
     get author() { return 'Conrad Weiser'; }
     get icon() { return "logo.png"; } // The website has SVG versions, I had to find one off of a different source
+    get hentaiSource() { return true; }
     convertLanguageToCode(language) {
         switch (language.toLowerCase()) {
             case "english": return Constants_1.LanguageCode.ENGLISH;
@@ -343,8 +344,8 @@ class Source {
         this.cheerio = cheerio;
     }
     /**
-     * An optional field where the author may put a link to their website
-     */
+   * An optional field where the author may put a link to their website
+   */
     get authorWebsite() { return null; }
     // <-----------        OPTIONAL METHODS        -----------> //
     /**
@@ -407,7 +408,6 @@ class Source {
      * @param section The list of HomeSection objects which are unfinished, and need filled out
      */
     getHomePageSections(data, section) { return null; }
-    //TODO: I don't think I understand this function correctly, the TypeDoc may need to be updated
     /**
      * (OPTIONAL METHOD) For many of the home page sections, there is an ability to view more of that selection
      * Calling this function should generate a {@link Request} targeting a new page of a given key

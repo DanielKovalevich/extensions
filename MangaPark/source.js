@@ -65,12 +65,13 @@ class MangaPark extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '1.0.2'; }
+    get version() { return '1.0.3'; }
     get name() { return 'MangaPark'; }
     get icon() { return 'icon.png'; }
     get author() { return 'Daniel Kovalevich'; }
     get authorWebsite() { return 'https://github.com/DanielKovalevich'; }
     get description() { return 'Extension that pulls manga from MangaPark, includes Advanced Search and Updated manga fetching'; }
+    get hentaiSource() { return false; }
     getMangaDetailsRequest(ids) {
         let requests = [];
         for (let id of ids) {
@@ -549,8 +550,8 @@ class Source {
         this.cheerio = cheerio;
     }
     /**
-     * An optional field where the author may put a link to their website
-     */
+   * An optional field where the author may put a link to their website
+   */
     get authorWebsite() { return null; }
     // <-----------        OPTIONAL METHODS        -----------> //
     /**
@@ -613,7 +614,6 @@ class Source {
      * @param section The list of HomeSection objects which are unfinished, and need filled out
      */
     getHomePageSections(data, section) { return null; }
-    //TODO: I don't think I understand this function correctly, the TypeDoc may need to be updated
     /**
      * (OPTIONAL METHOD) For many of the home page sections, there is an ability to view more of that selection
      * Calling this function should generate a {@link Request} targeting a new page of a given key
