@@ -48,100 +48,97 @@ var LanguageCode;
 },{}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var MangaStatus;
-(function (MangaStatus) {
-    MangaStatus[MangaStatus["ONGOING"] = 0] = "ONGOING";
-    MangaStatus[MangaStatus["COMPLETED"] = 1] = "COMPLETED";
-})(MangaStatus = exports.MangaStatus || (exports.MangaStatus = {}));
-
-},{}],3:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const Source_1 = require("../Source");
-const Manga_1 = require("../../models/Manga/Manga");
 const Constants_1 = require("../../models/Constants/Constants");
-const MS_DOMAIN = 'https://mangaseeonline.us';
-class Mangasee extends Source_1.Source {
+const NHENTAI_DOMAIN = 'https://nhentai.net';
+class NHentai extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '1.0.1'; }
-    get name() { return 'Mangasee'; }
-    get icon() { return 'icon.png'; }
-    get author() { return 'Daniel Kovalevich'; }
-    get authorWebsite() { return 'https://github.com/DanielKovalevich'; }
-    get description() { return 'Extension that pulls manga from Mangasee, includes Advanced Search and Updated manga fetching'; }
+    get version() { return '0.5'; }
+    get name() { return 'nHentai'; }
+    get description() { return 'Extension that pulls manga from nHentai'; }
+    get author() { return 'Conrad Weiser'; }
+    get icon() { return "logo.png"; } // The website has SVG versions, I had to find one off of a different source
+    convertLanguageToCode(language) {
+        switch (language.toLowerCase()) {
+            case "english": return Constants_1.LanguageCode.ENGLISH;
+            case "japanese": return Constants_1.LanguageCode.JAPANESE;
+            case "chinese": return Constants_1.LanguageCode.CHINEESE;
+            default: return Constants_1.LanguageCode.UNKNOWN;
+        }
+    }
     getMangaDetailsRequest(ids) {
         let requests = [];
         for (let id of ids) {
             let metadata = { 'id': id };
             requests.push(createRequestObject({
-                url: `${MS_DOMAIN}/manga/`,
+                url: `${NHENTAI_DOMAIN}/g/${id}`,
                 metadata: metadata,
-                method: 'GET',
-                param: id
+                method: 'GET'
             }));
         }
         return requests;
     }
     getMangaDetails(data, metadata) {
-        var _a, _b;
+        var _a, _b, _c, _d, _e, _f;
         let manga = [];
         for (let [i, response] of data.entries()) {
             let $ = this.cheerio.load(response);
-            let info = $('.row');
-            let image = (_a = $('img', '.row').attr('src')) !== null && _a !== void 0 ? _a : '';
-            let title = (_b = $('.SeriesName', info).text()) !== null && _b !== void 0 ? _b : '';
+            let info = $('[itemprop=name]');
+            let image = (_a = $('[itemprop=image]').attr('content')) !== null && _a !== void 0 ? _a : '';
+            let title = (_b = $('[itemprop=name]').attr('content')) !== null && _b !== void 0 ? _b : '';
+            // Comma seperate all of the tags and store them in our tag section 
+            let tagSections = [createTagSection({ id: '0', label: 'tag', tags: [] })];
+            let tags = (_d = (_c = $('meta[name="twitter:description"]').attr('content')) === null || _c === void 0 ? void 0 : _c.split(",")) !== null && _d !== void 0 ? _d : [];
+            for (let i = 0; i < tags.length; i++) {
+                tagSections[0].tags.push(createTag({
+                    id: i.toString().trim(),
+                    label: tags[i]
+                }));
+            }
+            // Grab the alternative titles
             let titles = [title];
-            let details = $('.details', info);
-            let author = '';
-            let tagSections = [createTagSection({ id: '0', label: 'genres', tags: [] }),
-                createTagSection({ id: '1', label: 'format', tags: [] })];
-            let status = Manga_1.MangaStatus.ONGOING;
-            let summary = '';
-            let hentai = false;
-            for (let row of $('.row', details).toArray()) {
-                let text = $('b', row).text();
-                switch (text) {
-                    case 'Alternate Name(s): ': {
-                        titles.push($(row).text().replace(/(Alternate Name\(s\):)*(\t*\n*)/g, '').trim());
-                        break;
+            let altTitleBlock = $('#info');
+            let altNameTop = (_e = $('h1', altTitleBlock).text()) !== null && _e !== void 0 ? _e : '';
+            let altNameBottom = (_f = $('h2', altTitleBlock).text()) !== null && _f !== void 0 ? _f : '';
+            if (altNameTop) {
+                titles.push(altNameTop);
+            }
+            if (altNameBottom) {
+                titles.push(altNameBottom);
+            }
+            // Get the artist and language information
+            let context = $("#info-block");
+            let artist = '';
+            let language = '';
+            for (let item of $('.tag-container', context).toArray()) {
+                if ($(item).text().indexOf("Artists") > -1) {
+                    let temp = $("a", item).text();
+                    artist = temp.substring(0, temp.indexOf(" ("));
+                }
+                else if ($(item).text().indexOf("Languages") > -1) {
+                    let temp = $("a", item);
+                    if (temp.toArray().length > 1) {
+                        let temptext = $(temp.toArray()[1]).text();
+                        language = temptext.substring(0, temptext.indexOf(" ("));
                     }
-                    case 'Author(s): ': {
-                        author = $(row).text().replace(/(Author\(s\):)*(\t*\n*)/g, '').trim();
-                        break;
-                    }
-                    case 'Genre(s): ': {
-                        let items = $(row).text().replace(/(Genre\(s\):)*(\t*\n*)/g, '').split(',');
-                        for (let item of items) {
-                            if (item.toLowerCase().includes('hentai')) {
-                                hentai = true;
-                            }
-                            else {
-                                tagSections[0].tags.push(createTag({ id: item.trim(), label: item.trim() }));
-                            }
-                        }
-                        break;
-                    }
-                    case 'Type:': {
-                        let type = $(row).text().replace(/(Type:)*(\t*\n*)/g, '').trim();
-                        tagSections[1].tags.push(createTag({ id: type.trim(), label: type.trim() }));
-                        break;
-                    }
-                    case 'Status: ': {
-                        status = $(row).text().includes('Ongoing') ? Manga_1.MangaStatus.ONGOING : Manga_1.MangaStatus.COMPLETED;
-                        break;
+                    else {
+                        let temptext = temp.text();
+                        language = temptext.substring(0, temptext.indexOf(" ("));
                     }
                 }
-                summary = $('.description', row).text();
             }
+            let status = 1;
+            let summary = '';
+            let hentai = true; // I'm assuming that's why you're here!
             manga.push(createManga({
                 id: metadata[i].id,
                 titles: titles,
                 image: image,
                 rating: 0,
                 status: status,
-                author: author,
+                artist: artist,
                 tags: tagSections,
                 description: summary,
                 hentai: hentai
@@ -152,56 +149,72 @@ class Mangasee extends Source_1.Source {
     getChaptersRequest(mangaId) {
         let metadata = { 'id': mangaId };
         return createRequestObject({
-            url: `${MS_DOMAIN}/manga/`,
+            url: `${NHENTAI_DOMAIN}/g/${mangaId}`,
             method: "GET",
-            metadata: metadata,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded"
-            },
-            param: mangaId
+            metadata: metadata
         });
     }
     getChapters(data, metadata) {
-        var _a, _b, _c, _d, _e;
+        var _a, _b;
         let $ = this.cheerio.load(data);
         let chapters = [];
-        for (let item of $('.list-group-item', '.list.chapter-list').toArray()) {
-            let id = ((_b = (_a = $(item).attr('href')) === null || _a === void 0 ? void 0 : _a.split('/').pop()) !== null && _b !== void 0 ? _b : '').replace('.html', '');
-            let chNum = Number((_c = $(item).attr('chapter')) !== null && _c !== void 0 ? _c : 0);
-            let title = (_d = $('.chapterLabel', item).text()) !== null && _d !== void 0 ? _d : '';
-            let time = new Date((_e = $('time', item).attr('datetime')) !== null && _e !== void 0 ? _e : '');
-            chapters.push(createChapter({
-                id: id,
-                mangaId: metadata.id,
-                name: title,
-                chapNum: chNum,
-                time: time,
-                langCode: Constants_1.LanguageCode.ENGLISH,
-            }));
+        // NHentai is unique, where there is only ever one chapter.
+        let title = (_a = $('[itemprop=name]').attr('content')) !== null && _a !== void 0 ? _a : '';
+        let time = new Date((_b = $('time').attr('datetime')) !== null && _b !== void 0 ? _b : '');
+        // Get the correct language code
+        let language = '';
+        for (let item of $('.tag-container').toArray()) {
+            if ($(item).text().indexOf("Languages") > -1) {
+                let temp = $("a", item);
+                if (temp.toArray().length > 1) {
+                    let temptext = $(temp.toArray()[1]).text();
+                    language = temptext.substring(0, temptext.indexOf(" ("));
+                }
+                else {
+                    let temptext = temp.text();
+                    language = temptext.substring(0, temptext.indexOf(" ("));
+                }
+            }
         }
+        chapters.push(createChapter({
+            id: "1",
+            mangaId: metadata.id,
+            name: title,
+            chapNum: 1,
+            time: time,
+            langCode: this.convertLanguageToCode(language),
+        }));
         return chapters;
     }
     getChapterDetailsRequest(mangaId, chapId) {
-        let metadata = { 'mangaId': mangaId, 'chapterId': chapId, 'nextPage': false, 'page': 1 };
+        let metadata = { 'mangaId': mangaId, 'chapterId': chapId };
         return createRequestObject({
-            url: `${MS_DOMAIN}/read-online/`,
+            url: `${NHENTAI_DOMAIN}/g/${mangaId}`,
             metadata: metadata,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded"
-            },
             method: 'GET',
-            param: chapId
         });
     }
     getChapterDetails(data, metadata) {
         var _a;
-        let script = JSON.parse(((_a = /PageArr=(.*);/g.exec(data)) !== null && _a !== void 0 ? _a : [])[1]);
+        let $ = this.cheerio.load(data);
+        // Get the number of chapters, we can generate URLs using that as a basis
         let pages = [];
-        let images = Object.values(script);
-        for (let [i, image] of images.entries()) {
-            if (i != images.length - 1) {
-                pages.push(image);
-            }
+        let thumbContainer = $("#thumbnail-container");
+        let numChapters = $('.thumb-container', thumbContainer).length;
+        // Get the gallery number that it is assigned to
+        let gallerySrc = $('img', thumbContainer).attr('data-src');
+        // We can regular expression match out the gallery ID from this string
+        let galleryId = parseInt((gallerySrc === null || gallerySrc === void 0 ? void 0 : gallerySrc.match(/.*\/(\d*)\//))[1]);
+        // Grab the image thumbnail, so we can determine whether this gallery uses PNG or JPG images
+        let imageType = ((_a = $('[itemprop=image]').attr('content')) === null || _a === void 0 ? void 0 : _a.match(/cover.([png|jpg]*)/))[1];
+        /**
+         * N-Hentai always follows the following formats for their pages:
+         * https://i.nhentai.net/galleries/43181/10.png
+         * The first digit is the gallery ID we retrieved above, whereas the second is the page number.
+         * We have the image types from the thumbnail
+         */
+        for (let i = 1; i <= numChapters; i++) {
+            pages.push(`https://i.nhentai.net/galleries/${galleryId}/${i}.${imageType}`);
         }
         let chapterDetails = createChapterDetails({
             id: metadata.chapterId,
@@ -215,141 +228,110 @@ class Mangasee extends Source_1.Source {
         };
         return returnObject;
     }
-    filterUpdatedMangaRequest(ids, time, page) {
-        let metadata = { 'ids': ids, 'referenceTime': time };
-        let data = { 'page': page };
-        data = Object.keys(data).map(function (key) { return encodeURIComponent(key) + '=' + encodeURIComponent(data[key]); }).join('&');
-        return createRequestObject({
-            url: `${MS_DOMAIN}/home/latest.request.php`,
-            metadata: metadata,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded"
-            },
-            timeout: 4000,
-            method: "POST",
-            data: data
-        });
-    }
-    filterUpdatedManga(data, metadata) {
-        var _a, _b, _c, _d, _e;
-        let $ = this.cheerio.load(data);
-        let returnObject = {
-            'updatedMangaIds': [],
-            'nextPage': true
-        };
-        for (let item of $('a').toArray()) {
-            if (new Date((_a = $('time', item).attr('datetime')) !== null && _a !== void 0 ? _a : '') > metadata.referenceTime) {
-                let id = (_e = ((_d = (_c = (_b = $(item).attr('href')) === null || _b === void 0 ? void 0 : _b.split('/').pop()) === null || _c === void 0 ? void 0 : _c.match(/(.*)-chapter/)) !== null && _d !== void 0 ? _d : [])[1]) !== null && _e !== void 0 ? _e : '';
-                if (metadata.ids.includes(id)) {
-                    returnObject.updatedMangaIds.push(id);
-                }
-            }
-            else {
-                returnObject.nextPage = false;
-                return returnObject;
-            }
-        }
-        return returnObject;
-    }
     searchRequest(query, page) {
-        var _a, _b, _c, _d, _e;
-        let genres = ((_a = query.includeGenre) !== null && _a !== void 0 ? _a : []).concat((_b = query.includeDemographic) !== null && _b !== void 0 ? _b : []).join(',');
-        let excluded = ((_c = query.excludeGenre) !== null && _c !== void 0 ? _c : ['Any']).concat((_d = query.excludeDemographic) !== null && _d !== void 0 ? _d : []).join(',');
-        let iFormat = ((_e = query.includeFormat) !== null && _e !== void 0 ? _e : []).join(',');
-        let status = "";
-        switch (query.status) {
-            case 0:
-                status = 'Completed';
-                break;
-            case 1:
-                status = 'Ongoing';
-                break;
-            default: status = '';
+        var _a;
+        // If the search query is a six digit direct link to a manga, create a request to just that URL and alert the handler via metadata
+        if ((_a = query.title) === null || _a === void 0 ? void 0 : _a.match(/\d{6}/)) {
+            return createRequestObject({
+                url: `${NHENTAI_DOMAIN}/g/${query.title}`,
+                metadata: { sixDigit: true },
+                timeout: 4000,
+                method: "GET"
+            });
         }
-        let data = {
-            'page': page,
-            'keyword': query.title,
-            'author': query.author || query.artist || '',
-            'sortBy': 'popularity',
-            'sortOrder': 'descending',
-            'status': status,
-            'type': iFormat,
-            'genre': genres,
-            'genreNo': excluded
-        };
-        let metadata = data;
-        data = Object.keys(data).map(function (key) {
-            if (data[key] != '')
-                return encodeURIComponent(key) + '=' + encodeURIComponent(data[key]);
-        }).join('&').replace(/&&/g, '&');
+        // Concat all of the available options together into a search keyword which can be supplied as a GET request param
+        let param = '';
+        if (query.title) {
+            param += query.title + ' ';
+        }
+        if (query.includeContent) {
+            for (let content in query.includeContent) {
+                param += ('tag:"' + query.includeContent[content] + '" ');
+            }
+        }
+        if (query.excludeContent) {
+            for (let content in query.excludeContent) {
+                param += ('-tag:"' + query.excludeContent[content] + '" ');
+            }
+        }
+        if (query.artist) {
+            param += ("Artist:" + query.artist + " ");
+        }
         return createRequestObject({
-            url: `${MS_DOMAIN}/search/request.php`,
-            metadata: metadata,
-            headers: {
-                "content-type": "application/x-www-form-urlencoded"
-            },
+            url: `${NHENTAI_DOMAIN}/search/?q=${param}`,
+            metadata: query,
             timeout: 4000,
-            method: "POST",
-            data: data
+            method: "GET"
         });
     }
     search(data) {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         let $ = this.cheerio.load(data);
         let mangaTiles = [];
-        for (let item of $('.requested').toArray()) {
-            let img = (_a = $('img', item).attr('src')) !== null && _a !== void 0 ? _a : '';
-            let id = (_c = (_b = $('.resultLink', item).attr('href')) === null || _b === void 0 ? void 0 : _b.split('/').pop()) !== null && _c !== void 0 ? _c : '';
-            let title = $('.resultLink', item).text();
-            let author = $('p', item).first().find('a').text();
+        // Was this a six digit request? We can check by seeing if we're on a manga page rather than a standard search page -- Metadata for hentai only exists on specific results, not searches, use that
+        let title = (_a = $('[itemprop=name]').attr('content')) !== null && _a !== void 0 ? _a : '';
+        if (title) {
+            // Retrieve the ID from the body
+            let contextNode = $('#bigcontainer');
+            let href = $('a', contextNode).attr('href');
+            let mangaId = parseInt((href === null || href === void 0 ? void 0 : href.match(/g\/(\d*)\/\d/))[1]);
             mangaTiles.push({
-                id: id,
-                title: createIconText({
-                    text: title
-                }),
-                image: img,
-                subtitleText: createIconText({
-                    text: author
-                })
+                id: mangaId.toString(),
+                title: createIconText({ text: (_b = $('[itemprop=name]').attr('content')) !== null && _b !== void 0 ? _b : '' }),
+                image: (_c = $('[itemprop=image]').attr('content')) !== null && _c !== void 0 ? _c : ''
+            });
+            return mangaTiles;
+        }
+        let containerNode = $('.index-container');
+        for (let item of $('.gallery', containerNode).toArray()) {
+            let currNode = $(item);
+            let image = $('img', currNode).attr('data-src');
+            // If image is undefined, we've hit a lazyload part of the website. Adjust the scraping to target the other features
+            if (image == undefined) {
+                image = 'http:' + $('img', currNode).attr('src');
+            }
+            let title = $('.caption', currNode).text();
+            let idHref = (_d = $('a', currNode).attr('href')) === null || _d === void 0 ? void 0 : _d.match(/\/(\d*)\//);
+            mangaTiles.push({
+                id: idHref[1],
+                title: createIconText({ text: title }),
+                image: image
             });
         }
         return mangaTiles;
     }
-    getTagsRequest() {
-        return createRequestObject({
-            url: `${MS_DOMAIN}/search/`,
-            method: 'GET',
-            headers: {
-                "content-type": "application/x-www-form-urlencoded",
-            }
-        });
+    getHomePageSectionRequest() {
+        let request = createRequestObject({ url: `${NHENTAI_DOMAIN}`, method: 'GET', });
+        let homeSection = createHomeSection({ id: 'latest_hentai', title: 'LATEST HENTAI' });
+        return [createHomeSectionRequest({ request: request, sections: [homeSection] })];
     }
-    getTags(data) {
-        var _a, _b;
-        let tagSections = [createTagSection({ id: '0', label: 'genres', tags: [] }),
-            createTagSection({ id: '1', label: 'format', tags: [] })];
+    getHomePageSections(data, section) {
+        var _a;
+        let updatedHentai = [];
         let $ = this.cheerio.load(data);
-        let types = $('#typeCollapse');
-        for (let type of $('.list-group-item', types).toArray()) {
-            let value = (_a = $(type).attr('value')) !== null && _a !== void 0 ? _a : '';
-            if (value != '') {
-                tagSections[1].tags.push(createTag({ id: value, label: $(type).text() }));
+        let containerNode = $('.index-container');
+        for (let item of $('.gallery', containerNode).toArray()) {
+            let currNode = $(item);
+            let image = $('img', currNode).attr('data-src');
+            // If image is undefined, we've hit a lazyload part of the website. Adjust the scraping to target the other features
+            if (image == undefined) {
+                image = 'http:' + $('img', currNode).attr('src');
             }
+            let title = $('.caption', currNode).text();
+            let idHref = (_a = $('a', currNode).attr('href')) === null || _a === void 0 ? void 0 : _a.match(/\/(\d*)\//);
+            updatedHentai.push({
+                id: idHref[1],
+                title: createIconText({ text: title }),
+                image: image
+            });
         }
-        let genres = $('#genreCollapse');
-        for (let genre of $('.list-group-item', genres).toArray()) {
-            tagSections[0].tags.push(createTag({ id: (_b = $(genre).attr('value')) !== null && _b !== void 0 ? _b : '', label: $(genre).text() }));
-        }
-        return tagSections;
+        section[0].items = updatedHentai;
+        return section;
     }
-    getHomePageSectionRequest() { return null; }
-    getHomePageSections(data, section) { return null; }
-    getViewMoreRequest(key, page) { return null; }
-    getViewMoreItems(data, key) { return null; }
 }
-exports.Mangasee = Mangasee;
+exports.NHentai = NHentai;
 
-},{"../../models/Constants/Constants":1,"../../models/Manga/Manga":2,"../Source":4}],4:[function(require,module,exports){
+},{"../../models/Constants/Constants":1,"../Source":3}],3:[function(require,module,exports){
 "use strict";
 /**
  * Request objects hold information for a particular source (see sources for example)
@@ -473,5 +455,5 @@ class Source {
 }
 exports.Source = Source;
 
-},{}]},{},[3])(3)
+},{}]},{},[2])(2)
 });
