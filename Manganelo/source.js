@@ -50,8 +50,8 @@ var LanguageCode;
 Object.defineProperty(exports, "__esModule", { value: true });
 var MangaStatus;
 (function (MangaStatus) {
-    MangaStatus[MangaStatus["ONGOING"] = 0] = "ONGOING";
-    MangaStatus[MangaStatus["COMPLETED"] = 1] = "COMPLETED";
+    MangaStatus[MangaStatus["ONGOING"] = 1] = "ONGOING";
+    MangaStatus[MangaStatus["COMPLETED"] = 0] = "COMPLETED";
 })(MangaStatus = exports.MangaStatus || (exports.MangaStatus = {}));
 
 },{}],3:[function(require,module,exports){
@@ -345,7 +345,7 @@ class Manganelo extends Source_1.Source {
             param: `${search}`
         });
     }
-    search(data) {
+    search(data, metadata) {
         var _a, _b, _c;
         let $ = this.cheerio.load(data);
         let panel = $('.panel-content-genres');

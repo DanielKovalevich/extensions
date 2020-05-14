@@ -55,7 +55,7 @@ class NHentai extends Source_1.Source {
     constructor(cheerio) {
         super(cheerio);
     }
-    get version() { return '0.7'; }
+    get version() { return '0.5.7'; }
     get name() { return 'nHentai'; }
     get description() { return 'Extension that pulls manga from nHentai'; }
     get author() { return 'Conrad Weiser'; }
@@ -264,7 +264,7 @@ class NHentai extends Source_1.Source {
             method: "GET"
         });
     }
-    search(data) {
+    search(data, metadata) {
         var _a, _b, _c, _d;
         let $ = this.cheerio.load(data);
         let mangaTiles = [];
@@ -275,11 +275,11 @@ class NHentai extends Source_1.Source {
             let contextNode = $('#bigcontainer');
             let href = $('a', contextNode).attr('href');
             let mangaId = parseInt((href === null || href === void 0 ? void 0 : href.match(/g\/(\d*)\/\d/))[1]);
-            mangaTiles.push({
+            mangaTiles.push(createMangaTile({
                 id: mangaId.toString(),
                 title: createIconText({ text: (_b = $('[itemprop=name]').attr('content')) !== null && _b !== void 0 ? _b : '' }),
                 image: (_c = $('[itemprop=image]').attr('content')) !== null && _c !== void 0 ? _c : ''
-            });
+            }));
             return mangaTiles;
         }
         let containerNode = $('.index-container');
@@ -292,11 +292,11 @@ class NHentai extends Source_1.Source {
             }
             let title = $('.caption', currNode).text();
             let idHref = (_d = $('a', currNode).attr('href')) === null || _d === void 0 ? void 0 : _d.match(/\/(\d*)\//);
-            mangaTiles.push({
+            mangaTiles.push(createMangaTile({
                 id: idHref[1],
                 title: createIconText({ text: title }),
                 image: image
-            });
+            }));
         }
         return mangaTiles;
     }
@@ -319,11 +319,11 @@ class NHentai extends Source_1.Source {
             }
             let title = $('.caption', currNode).text();
             let idHref = (_a = $('a', currNode).attr('href')) === null || _a === void 0 ? void 0 : _a.match(/\/(\d*)\//);
-            updatedHentai.push({
+            updatedHentai.push(createMangaTile({
                 id: idHref[1],
                 title: createIconText({ text: title }),
                 image: image
-            });
+            }));
         }
         section[0].items = updatedHentai;
         return section;
