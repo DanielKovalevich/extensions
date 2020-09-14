@@ -238,6 +238,8 @@ class MangaLife extends Source_1.Source {
         return returnObject;
     }
     searchRequest(query, page) {
+        if (page > 1)
+            return null; // Manga4Life retrieves all manga with one request
         let status = "";
         switch (query.status) {
             case 0:
